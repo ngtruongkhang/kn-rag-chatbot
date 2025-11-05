@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.route import kb
+from app.route import kb, rag
 
 app = FastAPI(title="RAG AI Chat API",
               version="0.0.1",
@@ -20,6 +20,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(kb.router)
+app.include_router(rag.router)
 
 @app.get("/")
 async def root():

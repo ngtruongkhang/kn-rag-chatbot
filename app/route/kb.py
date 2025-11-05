@@ -5,8 +5,10 @@ from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.service.kb_service import KBService
 
 router = APIRouter(prefix="/api", tags=["knowledge base"])
+kb_service = KBService(settings.kb_name)
 
 @router.post("/kb/upload", response_class=JSONResponse)
 async def upload_files(files: List[UploadFile] = File(...)):
@@ -19,6 +21,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
             f.write(await file.read())
     return {"message": f"{len(files)} files uploaded successfully"}
 
+
 @router.get("/kb/list", response_class=JSONResponse)
 async def list_files():
     """List all files in knowledge base with their sizes"""
@@ -30,9 +33,15 @@ async def list_files():
             if os.path.isfile(file_path):
                 size = os.path.getsize(file_path)
                 files.append({"name": filename, "size": size})
-    return {"files": files}
+    return files
+
+@router.get("/kb/check", response_class=JSONResponse)
+async def check_kb():
+    """Check existing files in the knowledge base"""
+    return kb_service.is_vector_store_not_empty()
 
 @router.post("/kb/new", response_class=JSONResponse)
 async def create_new_knowledge_base():
     """Create a new knowledge base from all uploaded files"""
-    ...
+    vector_store = await kb_service.create_new_knowledge_base()
+    return {"message": f"Knowledge base '{settings.kb_name}' created successfully"}

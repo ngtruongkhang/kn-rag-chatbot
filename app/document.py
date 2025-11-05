@@ -52,7 +52,7 @@ def storing_documents(doc_splits):
     vector_store.add_documents(documents=doc_splits)
     return vector_store
 
-def get_vector_db():
+def get_vector_db_old():
     db_dir = os.path.join(settings.project_path, "db", "chroma_langchain_db")
     # embeddings model
     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")

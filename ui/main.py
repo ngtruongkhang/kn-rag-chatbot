@@ -1,11 +1,9 @@
-import uuid
+import os
 
 import gradio as gr
+import requests
 
-from app.document import create_vector_db_from_files, is_vector_store_not_empty
 from app.config import settings
-
-from app.rag_agent import RagAgent
 
 # State to track database creation
 db_created = gr.State(False)
@@ -13,80 +11,115 @@ db_status_msg = gr.State([])
 rag_agent = None
 thread_id = None
 
-existing_files = ["Chinh_sach_hoc_bong_va_ho_tro.md", "Hoc_phi.md", "Tai_sao_chon_DLA.md"]
+def onLoad():
+    # check existing knowledge base
+    kb_exists = check_kb()
+    if kb_exists:
+        kb_msg = "Existing knowledge base found."
+    else:
+        kb_msg = "No knowledge base found. Please create new."
 
-# UI callbacks
-def process_files(files):
+    uploaded_files = fetch_uploaded_files()
+    uploaded_files_msg = "\n".join(f"{file['name']} ({file['size'] / 1024:.2f} KB)" for file in uploaded_files)
+    return uploaded_files_msg, kb_msg
+
+def fetch_uploaded_files():
+    url = f"{settings.api_base_url}/kb/list"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
+
+def check_kb():
+    url = f"{settings.api_base_url}/kb/check"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
+
+def upload_files(files):
     if not files:
-        files = []
-        files.extend(settings.project_path + "/db/" + file for file in existing_files)
+        return None, gr.update(value="No files uploaded.")
 
-    global vector_db
-    vector_db, titles = create_vector_db_from_files(files)
+    url = f"{settings.api_base_url}/kb/upload"
+    files_payload = []
+    for file in files:
+        if hasattr(file, "name") and hasattr(file, "read"):
+            # file-like object
+            files_payload.append(("files", (file.name, file.read(), "application/octet-stream")))
+        else:
+            # file path
+            with open(file, "rb") as f:
+                files_payload.append(("files", (os.path.basename(file), f.read(), "application/octet-stream")))
 
-    db_created.value = True
+    response = requests.post(url, files=files_payload)
+    response.raise_for_status()
 
-    status_message = "Database created.\nFiles:\n  " + "\n  ".join(titles)
-    db_status_msg.value.append(status_message)
-    return gr.update(value="\n".join(db_status_msg.value))
+    # display uploaded files
+    uploaded_files = fetch_uploaded_files()
+    uploaded_files_msg = "\n".join(f"{file['name']} ({file['size'] / 1024:.2f} KB)" for file in uploaded_files)
+
+    return uploaded_files_msg, response.json().get("message")
+
+def create_kb():
+    url = f"{settings.api_base_url}/kb/new"
+    response = requests.post(url)
+    response.raise_for_status()
+
+    return response.json().get("message", "Knowledge base created.")
 
 def start_chat_session():
-    if not is_vector_store_not_empty():
-        status_message = "\nDatabase not created. Please upload files and create the database first."
-        return gr.update(value=status_message)
-
-    if not db_status_msg.value:
-        status_message = "Use existing database. \nFiles:\n  " + "\n  ".join(existing_files)
-        db_status_msg.value.append(status_message)
-
+    url = f"{settings.api_base_url}/rag/start"
+    response = requests.get(url)
+    response.raise_for_status()
     global thread_id
-    thread_id = make_thread_id()
+    thread_id = response.text
 
-    status_message = "\nChat session started. You can now ask questions based on the uploaded documents."
+    status_message = f"Chat session {response.text} started. You can now ask questions based on the uploaded documents."
     db_status_msg.value.append(status_message)
     return gr.update(value="\n".join(db_status_msg.value))
 
-def chat(user_input, history):
-    if not is_vector_store_not_empty():
-        return "Chat cannot be started. Database not created." if not db_created.value else f"Echo: {user_input}"
+def query_llm(user_input, history):
+    payload = {
+        "kb_name": settings.kb_name,
+        "conversation_id": thread_id,
+        "user_input": user_input
+    }
+    url = f"{settings.api_base_url}/rag/chat"
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
 
-    global thread_id
-    config = {"configurable": {"thread_id": thread_id}}
-    rag_agent = get_rag_agent()
-    response = rag_agent.invoke({"messages": [{"role": "user", "content": user_input}]}, config=config)
-    return response["messages"][-1].content
+    return response.json()
 
-def get_rag_agent():
-    global rag_agent
-    if rag_agent is None:
-        rag = RagAgent()
-        rag_agent = rag.create_rag_agent()
-
-    return rag_agent
-
-def make_thread_id() -> str:
-    return str(uuid.uuid4())
 
 with gr.Blocks() as demo:
-    with gr.Row():
+    with gr.Row(equal_height=True):
         with gr.Column(scale=1):
-            gr.Markdown("## Database")
+            gr.Markdown("## Knowledge Base")
             file_upload = gr.File(label="Upload Markdown Files", file_count="multiple", file_types=[".md"])
-            submit_btn = gr.Button("Create new database")
-            db_status = gr.Textbox(label="Status", interactive=False, lines=5)
+            upload_btn = gr.Button("Upload files")
+            uploaded_files_status = gr.Textbox(label="Files in knowledge base:", interactive=False, lines=5)
+            create_kb_btn = gr.Button("Create new knowledge base")
+            kb_status = gr.Textbox(label="Status", interactive=False, lines=5)
             chat_btn = gr.Button("Start chat session")
         with gr.Column(scale=1):
             gr.Markdown("## Chat")
-            chatbot = gr.ChatInterface(chat)
+            chatbot = gr.ChatInterface(query_llm, type="messages", fill_height=True)
 
-    submit_btn.click(
-        process_files,
+    upload_btn.click(
+        upload_files,
         inputs=[file_upload],
-        outputs=[db_status]
+        outputs=[uploaded_files_status, kb_status]
+    )
+    create_kb_btn.click(
+        create_kb,
+        outputs=[kb_status]
     )
     chat_btn.click(
         start_chat_session,
-        outputs=[db_status]
+        outputs=[kb_status]
+    )
+    demo.load(
+        fn=onLoad,
+        outputs=[uploaded_files_status, kb_status]
     )
 
 demo.launch(debug=True)

@@ -5,7 +5,7 @@ import gradio as gr
 from app.document import create_vector_db_from_files, is_vector_store_not_empty
 from app.config import settings
 
-from app.rag_agent import RagAgent
+from app.service.rag_agent import RagAgent
 
 # State to track database creation
 db_created = gr.State(False)
@@ -49,7 +49,6 @@ def start_chat_session():
 def chat(user_input, history):
     if not is_vector_store_not_empty():
         return "Chat cannot be started. Database not created." if not db_created.value else f"Echo: {user_input}"
-
     global thread_id
     config = {"configurable": {"thread_id": thread_id}}
     rag_agent = get_rag_agent()
