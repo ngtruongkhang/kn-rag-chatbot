@@ -1,4 +1,4 @@
 /.venv/
 /.idea/
-/db/chroma_langchain_db/
-/.env.local
+/db/chroma_*/
+/.env
