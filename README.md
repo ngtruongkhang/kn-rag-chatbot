@@ -45,12 +45,11 @@ tests/                # Unit and integration tests
    uv sync
    ```
 3. Environment variables:
-   - Set the api keys for using llm models and tracing with langsmith
+   - Create .env file from .env.local and set the api keys for using llm models and tracing with langsmith
    ```
    GOOGLE_API_KEY=...
    LANGSMITH_API_KEY=...
    ```
-   - Settings are also in `.env`.
 
 ### Running the Application
 You can run the backend and UI separately or together.
