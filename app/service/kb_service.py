@@ -15,7 +15,7 @@ class KBService:
         self.kb_dir = os.path.join(settings.project_path, "db", "chroma_" + kb_name)
 
 
-    async def create_new_knowledge_base(self):
+    async def create_new_knowledge_base(self) -> Chroma:
         """Create a new knowledge base from all uploaded files"""
         self.reset_kb()
         docs = self._load_markdown_documents()

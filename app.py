@@ -4,12 +4,18 @@ import gradio as gr
 import requests
 
 from app.config import settings
+from app.service.kb_service import KBService
+from app.service.rag_service import RagService
+from app.utils import fetch_uploaded_files, create_new_uuid
 
 # State to track database creation
 db_created = gr.State(False)
 db_status_msg = gr.State([])
 rag_agent = None
 thread_id = None
+
+kb_service = KBService(settings.kb_name)
+rag_service = RagService()
 
 def onLoad():
     # check existing knowledge base
@@ -23,71 +29,56 @@ def onLoad():
     uploaded_files_msg = "\n".join(f"{file['name']} ({file['size'] / 1024:.2f} KB)" for file in uploaded_files)
     return uploaded_files_msg, kb_msg
 
-def fetch_uploaded_files():
-    url = f"{settings.api_base_url}/kb/list"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()
-
 def check_kb():
-    url = f"{settings.api_base_url}/kb/check"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()
+    return kb_service.is_vector_store_not_empty()
 
 def upload_files(files):
     if not files:
         return None, gr.update(value="No files uploaded.")
 
-    url = f"{settings.api_base_url}/kb/upload"
-    files_payload = []
+    # save uploaded files to raw directory
+    raw_dir = os.path.join(settings.project_path, "db", "raw")
+    os.makedirs(raw_dir, exist_ok=True)
     for file in files:
         if hasattr(file, "name") and hasattr(file, "read"):
             # file-like object
-            files_payload.append(("files", (file.name, file.read(), "application/octet-stream")))
+            file_path = os.path.join(raw_dir, file.name)
+            with open(file_path, "wb") as f:
+                f.write(file.read())
         else:
             # file path
-            with open(file, "rb") as f:
-                files_payload.append(("files", (os.path.basename(file), f.read(), "application/octet-stream")))
+            file_path = os.path.join(raw_dir, os.path.basename(file))
+            with open(file, "rb") as src_f, open(file_path, "wb") as dest_f:
+                dest_f.write(src_f.read())
 
-    response = requests.post(url, files=files_payload)
-    response.raise_for_status()
+    msg = f"{len(files)} files uploaded successfully"
 
     # display uploaded files
     uploaded_files = fetch_uploaded_files()
     uploaded_files_msg = "\n".join(f"{file['name']} ({file['size'] / 1024:.2f} KB)" for file in uploaded_files)
 
-    return uploaded_files_msg, response.json().get("message")
+    return uploaded_files_msg, msg
 
-def create_kb():
-    url = f"{settings.api_base_url}/kb/new"
-    response = requests.post(url)
-    response.raise_for_status()
-
-    return response.json().get("message", "Knowledge base created.")
+async def create_kb():
+    await kb_service.create_new_knowledge_base()
+    return f"Knowledge base '{settings.kb_name}' created successfully"
 
 def start_chat_session():
-    url = f"{settings.api_base_url}/rag/start"
-    response = requests.get(url)
-    response.raise_for_status()
     global thread_id
-    thread_id = response.text
+    thread_id = create_new_uuid()
 
-    status_message = f"Chat session {response.text} started. You can now ask questions based on the uploaded documents."
+    status_message = f"Chat session {thread_id} started. You can now ask questions based on the uploaded documents."
     db_status_msg.value.append(status_message)
     return gr.update(value="\n".join(db_status_msg.value))
 
 def query_llm(user_input, history):
-    payload = {
-        "kb_name": settings.kb_name,
-        "conversation_id": thread_id,
-        "user_input": user_input
-    }
-    url = f"{settings.api_base_url}/rag/chat"
-    response = requests.post(url, json=payload)
-    response.raise_for_status()
-
-    return response.json()
+    agent = rag_service.create_rag_agent()
+    config = {"configurable": {"thread_id": thread_id}}
+    response = agent.invoke(
+        {"messages": [{"role": "user", "content": user_input}]},
+        config=config,
+    )
+    return response["messages"][-1].content
 
 
 with gr.Blocks() as demo:
@@ -122,4 +113,4 @@ with gr.Blocks() as demo:
         outputs=[uploaded_files_status, kb_status]
     )
 
-demo.launch()
+demo.launch(debug=True)

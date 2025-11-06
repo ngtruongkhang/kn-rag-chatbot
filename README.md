@@ -12,7 +12,7 @@ A Retrieval-Augmented Generation (RAG) chatbot for knowledge management and ques
 ## Project Structure
 ```
 app.py                # Main application entry point
-app/                  # Core application modules
+app/                  # (Backend) Core application modules
   config.py           # Configuration settings
   main.py             # App initialization
   model/              # Data models (e.g., RagRequest)
@@ -20,7 +20,8 @@ app/                  # Core application modules
   service/            # Business logic (kb_service, rag_service)
 db/                   # Knowledge base documents and Chroma DB
   raw/                # uploaded documents
-ui/                   # User interface code
+ui/                   # (Frontend) User interface code
+app.py                # standalone UI entry point for demo
 requirements.txt      # Python dependencies
 pyproject.toml        # Project metadata
 README.md             # Project documentation
@@ -52,15 +53,20 @@ tests/                # Unit and integration tests
    - Settings are also in `.env`.
 
 ### Running the Application
-1. Backend:
-```sh
-python app/main.py
-```
-
-2. UI:
-```sh
-python ui/main.py
-```
+You can run the backend and UI separately or together.
+1. Backend and frontend separately:
+   - Start the backend server:
+   ```sh
+   python app/main.py
+   ```
+   - In another terminal, start the UI:
+   ```sh
+   python ui/main.py
+   ```
+2. Backend and frontend together:
+   ```sh
+    python app.py
+    ```
 ### Running Tests
 Currently, no tests are available.
 

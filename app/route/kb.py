@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.service.kb_service import KBService
+from app.utils import fetch_uploaded_files
 
 router = APIRouter(prefix="/api", tags=["knowledge base"])
 kb_service = KBService(settings.kb_name)
@@ -25,15 +26,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
 @router.get("/kb/list", response_class=JSONResponse)
 async def list_files():
     """List all files in knowledge base with their sizes"""
-    raw_dir = os.path.join(settings.project_path, "db", "raw")
-    files = []
-    if os.path.exists(raw_dir):
-        for filename in os.listdir(raw_dir):
-            file_path = os.path.join(raw_dir, filename)
-            if os.path.isfile(file_path):
-                size = os.path.getsize(file_path)
-                files.append({"name": filename, "size": size})
-    return files
+    return fetch_uploaded_files()
 
 @router.get("/kb/check", response_class=JSONResponse)
 async def check_kb():

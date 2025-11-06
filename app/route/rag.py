@@ -1,10 +1,9 @@
-import uuid
-
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.model.RagRequest import RagRequest
 from app.service.rag_service import RagService
+from app.utils import create_new_uuid
 
 router = APIRouter(prefix="/api", tags=["RAG chat"])
 
@@ -27,5 +26,4 @@ async def start_new_session():
     """Start a new RAG chat session"""
     return create_new_uuid()
 
-def create_new_uuid() -> str:
-    return str(uuid.uuid4())
+
