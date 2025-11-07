@@ -10,7 +10,8 @@ from app.service.kb_service import KBService
 
 class RagService:
     def __init__(self):
-        self.model = init_chat_model("google_genai:" + settings.llm_model)
+        self.model = init_chat_model("google_genai:" + settings.llm_model,
+                                     google_api_key=settings.google_api_key)
         self.agent = None
 
     def create_rag_agent(self):

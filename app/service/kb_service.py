@@ -50,7 +50,9 @@ class KBService:
         return vector_store
 
     def get_vector_db(self):
-        embeddings = GoogleGenerativeAIEmbeddings(model=f"models/{settings.embedding_model}")
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model=f"models/{settings.embedding_model}",
+            google_api_key=settings.google_api_key)
         # vector store Chroma
         vector_store = Chroma(
             collection_name=self.kb_name,
