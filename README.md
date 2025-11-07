@@ -1,4 +1,4 @@
-# KN-RAG Chatbot
+# RAG Chatbot
 
 A Retrieval-Augmented Generation (RAG) chatbot for knowledge management and question answering, built with Python. This project leverages local document storage and retrieval to provide accurate, context-aware responses.
 
