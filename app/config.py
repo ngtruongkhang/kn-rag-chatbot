@@ -8,8 +8,8 @@ class Settings(BaseModel):
     project_path: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Model settings
-    llm_model: str = os.getenv("LLM_MODEL")
-    embedding_model: str = os.getenv("EMBEDDING_MODEL")
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
 
     # KB
     kb_name: str = os.getenv("KB_NAME", "default_kb")

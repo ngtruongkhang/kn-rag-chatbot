@@ -4,21 +4,26 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Copy files
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
 COPY . .
 
 # write access permissions to the db folder
 RUN chmod -R 777 /app/db
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Expose port for Gradio (default 7860)
-EXPOSE 8080
+EXPOSE 8000
 
 # Set environment variables for production
 ENV PYTHONUNBUFFERED 1
-ENV PORT 8080
 
 # Start the Gradio app
 CMD ["python", "app.py"]
