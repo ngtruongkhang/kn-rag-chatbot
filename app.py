@@ -1,7 +1,6 @@
 import os
 
 import gradio as gr
-import requests
 
 from app.config import settings
 from app.service.kb_service import KBService
@@ -113,4 +112,5 @@ with gr.Blocks() as demo:
         outputs=[uploaded_files_status, kb_status]
     )
 
-demo.launch(server_name="0.0.0.0", server_port=7860)
+port = int(os.environ.get("PORT", 8080))
+demo.launch(server_name="0.0.0.0", server_port=port)
