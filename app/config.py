@@ -8,6 +8,7 @@ class Settings(BaseModel):
     project_path: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Model settings
+    google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
     llm_model: str = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
 
