@@ -4,5 +4,5 @@
 /.env
 __pycache__/
 */__pycache__/
-.gradio/certificate.pem
+.gradio/
 .github/
